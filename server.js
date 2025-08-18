@@ -64,19 +64,26 @@ app.get("/prices", async (req, res) => {
   try {
     const odosPrices = {};
     const mexcPrices = {};
+    const spreads = {};
 
     for (const token of TOKENS) {
       odosPrices[token.symbol] = await getOdosPrice(token);
       mexcPrices[token.symbol] = await getMexcPrice(token);
+
+      const odos = odosPrices[token.symbol];
+      const mexc = mexcPrices[token.symbol];
+
+      if (odos !== null && mexc !== null) {
+        spreads[token.symbol] = ((odos - mexc) / mexc) * 100;
+      } else {
+        spreads[token.symbol] = null;
+      }
     }
 
-    res.json({ odos: odosPrices, mexc: mexcPrices });
+    res.json({ odos: odosPrices, mexc: mexcPrices, spread: spreads });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Ошибка при получении цен" });
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
