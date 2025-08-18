@@ -2,43 +2,49 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <title>Цены ODOS</title>
+  <title>Цены ODOS + MEXC</title>
   <style>
     body { font-family: Arial, sans-serif; background: #f8f9fa; text-align: center; padding: 20px; }
-    table { margin: 0 auto; border-collapse: collapse; }
-    th, td { border: 1px solid #ddd; padding: 8px 16px; }
+    table { margin: 0 auto; border-collapse: collapse; min-width: 400px; }
+    th, td { border: 1px solid #ddd; padding: 8px 16px; text-align: center; }
     th { background: #2c3e50; color: white; }
   </style>
 </head>
 <body>
-  <h1>Котировки (ODOS → USDT)</h1>
+  <h1>Котировки USDT</h1>
   <table id="prices">
     <thead>
-      <tr><th>Токен</th><th>Цена (USDT)</th></tr>
+      <tr>
+        <th>Токен</th>
+        <th>ODOS</th>
+        <th>MEXC</th>
+      </tr>
     </thead>
     <tbody>
-      <tr><td>NAKA</td><td id="NAKA">Загрузка...</td></tr>
-      <tr><td>SAND</td><td id="SAND">Загрузка...</td></tr>
-      <tr><td>NWS</td><td id="NWS">Загрузка...</td></tr>
+      <tr><td>NAKA</td><td id="NAKA-odos">Загрузка...</td><td id="NAKA-mexc">Загрузка...</td></tr>
+      <tr><td>SAND</td><td id="SAND-odos">Загрузка...</td><td id="SAND-mexc">Загрузка...</td></tr>
+      <tr><td>NWS</td><td id="NWS-odos">Загрузка...</td><td id="NWS-mexc">Загрузка...</td></tr>
     </tbody>
   </table>
 
   <script>
     const USDT = "0xc2132d05d31c914a87c6611c10748aeb04b58e8f"; // USDT на Polygon
+
     const tokens = {
       NAKA: "0x311434160d7537be358930def317afb606c0d737",
       SAND: "0xbbba073c31bf03b8acf7c28ef0738decf3695683",
       NWS:  "0x13646e0e2d768d31b75d1a1e375e3e17f18567f2"
     };
 
-    async function fetchPrice(symbol, address) {
+    // --- ODOS ---
+    async function fetchOdosPrice(symbol, address) {
       try {
         const res = await fetch("https://api.odos.xyz/sor/quote/v2", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            chainId: 137, // Polygon
-            inputTokens: [{ tokenAddress: address, amount: "1000000000000000000" }], // 1 токен (1e18 wei)
+            chainId: 137,
+            inputTokens: [{ tokenAddress: address, amount: "1000000000000000000" }], // 1 токен
             outputTokens: [{ tokenAddress: USDT }],
             slippageLimitPercent: 1
           })
@@ -48,21 +54,39 @@
         const out = data.outAmounts?.[0];
 
         if (out) {
-          // USDT = 6 decimals
-          const price = Number(out) / 1e6;
-          document.getElementById(symbol).textContent = price.toFixed(6);
+          const price = Number(out) / 1e6; // USDT = 6 decimals
+          document.getElementById(symbol + "-odos").textContent = price.toFixed(6);
         } else {
-          document.getElementById(symbol).textContent = "Нет данных";
+          document.getElementById(symbol + "-odos").textContent = "Нет данных";
         }
       } catch (e) {
-        document.getElementById(symbol).textContent = "Ошибка";
-        console.error("Ошибка загрузки:", e);
+        document.getElementById(symbol + "-odos").textContent = "Ошибка";
+        console.error("ODOS ошибка:", e);
       }
     }
 
+    // --- MEXC ---
+    async function fetchMexcPrice(symbol) {
+      try {
+        const res = await fetch(`https://api.mexc.com/api/v3/ticker/price?symbol=${symbol}USDT`);
+        const data = await res.json();
+
+        if (data.price) {
+          document.getElementById(symbol + "-mexc").textContent = parseFloat(data.price).toFixed(6);
+        } else {
+          document.getElementById(symbol + "-mexc").textContent = "Нет данных";
+        }
+      } catch (e) {
+        document.getElementById(symbol + "-mexc").textContent = "Ошибка";
+        console.error("MEXC ошибка:", e);
+      }
+    }
+
+    // --- Обновление ---
     function updatePrices() {
       for (const [symbol, address] of Object.entries(tokens)) {
-        fetchPrice(symbol, address);
+        fetchOdosPrice(symbol, address);
+        fetchMexcPrice(symbol);
       }
     }
 
