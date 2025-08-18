@@ -14,7 +14,10 @@ const TOKENS = [
   { symbol: "NWS", address: "0x13646e0e2d768d31b75d1a1e375e3e17f18567f2" }
 ];
 
-// ODOS chainId для Polygon = 137
+// USDT (Polygon)
+const USDT = "0xc2132d05d31c914a87c6611c10748aeb04b58e8f";
+
+// ODOS chainId для Polygon
 const CHAIN_ID = 137;
 
 // API route для цен
@@ -23,13 +26,46 @@ app.get("/prices", async (req, res) => {
     const odosPrices = {};
     const mexcPrices = {};
 
-    // Запросы к ODOS
+    // Запросы к ODOS (через sor/quote/v2)
     for (const token of TOKENS) {
-      const odosUrl = `https://api.odos.xyz/pricing/token/${CHAIN_ID}/${token.address}`;
-      const odosRes = await fetch(odosUrl);
-      const odosData = await odosRes.json();
+      try {
+        const odosUrl = `https://api.odos.xyz/sor/quote/v2`;
+        const body = {
+          chainId: CHAIN_ID,
+          inputTokens: [
+            {
+              tokenAddress: token.address,
+              amount: "1000000000000000000" // 1 токен (в wei, для ERC20 с 18 decimals)
+            }
+          ],
+          outputTokens: [
+            {
+              tokenAddress: USDT,
+              proportion: 1
+            }
+          ]
+        };
 
-      odosPrices[token.symbol] = odosData.price || null;
+        const odosRes = await fetch(odosUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body)
+        });
+
+        const odosData = await odosRes.json();
+
+        if (odosData.outputTokens && odosData.outputTokens.length > 0) {
+          const amountOut = odosData.outputTokens[0].amount;
+          // USDT тоже с 6 decimals → делим на 1e6
+          const price = parseFloat(amountOut) / 1e6;
+          odosPrices[token.symbol] = price;
+        } else {
+          odosPrices[token.symbol] = null;
+        }
+      } catch (err) {
+        console.error(`ODOS error for ${token.symbol}:`, err);
+        odosPrices[token.symbol] = null;
+      }
     }
 
     // Запросы к MEXC (спот API)
@@ -56,4 +92,3 @@ app.get("/prices", async (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
-// JavaScript Document
