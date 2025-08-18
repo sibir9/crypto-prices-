@@ -1,18 +1,19 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <title>Цены токенов</title>
-  <style>
-    body { font-family: Arial, sans-serif; background: #f8f9fa; padding: 20px; }
-    table { border-collapse: collapse; width: 100%; max-width: 600px; margin: auto; }
-    th, td { border: 1px solid #ddd; padding: 10px; text-align: center; }
-    th { background: #2c3e50; color: white; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Цены токенов</title>
+<style>
+  body { font-family: Arial, sans-serif; background: #f8f9fa; padding: 30px; }
+  table { border-collapse: collapse; width: 100%; max-width: 600px; margin: auto; }
+  th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+  th { background: #2c3e50; color: white; }
+</style>
 </head>
 <body>
-  <h1 style="text-align:center;">Котировки токенов</h1>
- <table border="1" cellspacing="0" cellpadding="5">
+<h1>Цены токенов</h1>
+<table>
   <thead>
     <tr>
       <th>Токен</th>
@@ -21,7 +22,7 @@
       <th>Спред (%)</th>
     </tr>
   </thead>
-  <tbody id="prices-table">
+  <tbody id="tokens-table">
     <tr><td>NAKA</td><td id="NAKA-odos">–</td><td id="NAKA-mexc">–</td><td id="NAKA-spread">–</td></tr>
     <tr><td>SAND</td><td id="SAND-odos">–</td><td id="SAND-mexc">–</td><td id="SAND-spread">–</td></tr>
     <tr><td>NWS</td><td id="NWS-odos">–</td><td id="NWS-mexc">–</td><td id="NWS-spread">–</td></tr>
@@ -34,25 +35,23 @@ async function updatePrices() {
     const res = await fetch("/prices");
     const data = await res.json();
 
-    for (const token of Object.keys(data.odos)) {
-      const odos = data.odos[token];
-      const mexc = data.mexc[token];
-      const spread = data.spread[token];
+    for (const symbol of ["NAKA","SAND","NWS"]) {
+      const odos = data.odos[symbol];
+      const mexc = data.mexc[symbol];
+      const spread = data.spread[symbol];
 
-      document.getElementById(token + "-odos").textContent = odos !== null ? odos.toFixed(6) : "–";
-      document.getElementById(token + "-mexc").textContent = mexc !== null ? mexc.toFixed(6) : "–";
-      document.getElementById(token + "-spread").textContent = spread !== null ? spread.toFixed(2) + "%" : "–";
+      document.getElementById(symbol + "-odos").textContent = odos !== null ? odos.toFixed(6) : "–";
+      document.getElementById(symbol + "-mexc").textContent = mexc !== null ? mexc.toFixed(6) : "–";
+      document.getElementById(symbol + "-spread").textContent = spread !== null ? spread.toFixed(2) : "–";
     }
   } catch (e) {
-    console.error("Ошибка обновления цен:", e);
+    console.error("Ошибка загрузки:", e);
   }
 }
 
-// Первый запрос
+// Обновляем каждые 15 секунд
 updatePrices();
-// Обновление каждые 15 секунд
 setInterval(updatePrices, 15000);
 </script>
-
 </body>
 </html>
