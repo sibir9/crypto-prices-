@@ -1,56 +1,73 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <title>Цены токенов</title>
+  <meta charset="UTF-8" />
+  <title>Цены ODOS</title>
   <style>
-    body { font-family: Arial, sans-serif; background: #f8f9fa; padding: 20px; }
-    table { border-collapse: collapse; width: 100%; max-width: 600px; margin: auto; }
-    th, td { border: 1px solid #ddd; padding: 10px; text-align: center; }
+    body { font-family: Arial, sans-serif; background: #f8f9fa; text-align: center; padding: 20px; }
+    table { margin: 0 auto; border-collapse: collapse; }
+    th, td { border: 1px solid #ddd; padding: 8px 16px; }
     th { background: #2c3e50; color: white; }
   </style>
 </head>
 <body>
-  <h1 style="text-align:center;">Котировки токенов</h1>
-  <table>
+  <h1>Котировки (ODOS → USDT)</h1>
+  <table id="prices">
     <thead>
-      <tr>
-        <th>Токен</th>
-        <th>ODOS (USDT)</th>
-        <th>MEXC (USDT)</th>
-      </tr>
+      <tr><th>Токен</th><th>Цена (USDT)</th></tr>
     </thead>
-    <tbody id="prices"></tbody>
+    <tbody>
+      <tr><td>NAKA</td><td id="NAKA">Загрузка...</td></tr>
+      <tr><td>SAND</td><td id="SAND">Загрузка...</td></tr>
+      <tr><td>NWS</td><td id="NWS">Загрузка...</td></tr>
+    </tbody>
   </table>
 
   <script>
-    async function loadPrices() {
+    const USDT = "0xc2132d05d31c914a87c6611c10748aeb04b58e8f"; // USDT на Polygon
+    const tokens = {
+      NAKA: "0x311434160d7537be358930def317afb606c0d737",
+      SAND: "0xbbba073c31bf03b8acf7c28ef0738decf3695683",
+      NWS:  "0x13646e0e2d768d31b75d1a1e375e3e17f18567f2"
+    };
+
+    async function fetchPrice(symbol, address) {
       try {
-        const res = await fetch("/prices");
+        const res = await fetch("https://api.odos.xyz/sor/quote/v2", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chainId: 137, // Polygon
+            inputTokens: [{ tokenAddress: address, amount: "1000000000000000000" }], // 1 токен (1e18 wei)
+            outputTokens: [{ tokenAddress: USDT }],
+            slippageLimitPercent: 1
+          })
+        });
+
         const data = await res.json();
-        const tbody = document.getElementById("prices");
-        tbody.innerHTML = "";
+        const out = data.outAmounts?.[0];
 
-        for (const symbol in data.odos) {
-          const odosPrice = data.odos[symbol] ? Number(data.odos[symbol]).toFixed(6) : "—";
-          const mexcPrice = data.mexc[symbol] ? Number(data.mexc[symbol]).toFixed(6) : "—";
-
-          const row = `
-            <tr>
-              <td>${symbol}</td>
-              <td>${odosPrice}</td>
-              <td>${mexcPrice}</td>
-            </tr>
-          `;
-          tbody.innerHTML += row;
+        if (out) {
+          // USDT = 6 decimals
+          const price = Number(out) / 1e6;
+          document.getElementById(symbol).textContent = price.toFixed(6);
+        } else {
+          document.getElementById(symbol).textContent = "Нет данных";
         }
-      } catch (err) {
-        console.error("Ошибка загрузки:", err);
+      } catch (e) {
+        document.getElementById(symbol).textContent = "Ошибка";
+        console.error("Ошибка загрузки:", e);
       }
     }
 
-    loadPrices();
-    setInterval(loadPrices, 10000);
+    function updatePrices() {
+      for (const [symbol, address] of Object.entries(tokens)) {
+        fetchPrice(symbol, address);
+      }
+    }
+
+    updatePrices();
+    setInterval(updatePrices, 15000); // каждые 15 сек
   </script>
 </body>
 </html>
