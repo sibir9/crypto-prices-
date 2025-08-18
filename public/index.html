@@ -12,45 +12,47 @@
 </head>
 <body>
   <h1 style="text-align:center;">Котировки токенов</h1>
-  <table>
-    <thead>
-      <tr>
-        <th>Токен</th>
-        <th>ODOS (USDT)</th>
-        <th>MEXC (USDT)</th>
-      </tr>
-    </thead>
-    <tbody id="prices"></tbody>
-  </table>
+ <table border="1" cellspacing="0" cellpadding="5">
+  <thead>
+    <tr>
+      <th>Токен</th>
+      <th>ODOS (USDT)</th>
+      <th>MEXC (USDT)</th>
+      <th>Спред (%)</th>
+    </tr>
+  </thead>
+  <tbody id="prices-table">
+    <tr><td>NAKA</td><td id="NAKA-odos">–</td><td id="NAKA-mexc">–</td><td id="NAKA-spread">–</td></tr>
+    <tr><td>SAND</td><td id="SAND-odos">–</td><td id="SAND-mexc">–</td><td id="SAND-spread">–</td></tr>
+    <tr><td>NWS</td><td id="NWS-odos">–</td><td id="NWS-mexc">–</td><td id="NWS-spread">–</td></tr>
+  </tbody>
+</table>
 
-  <script>
-    async function loadPrices() {
-      try {
-        const res = await fetch("/prices");
-        const data = await res.json();
-        const tbody = document.getElementById("prices");
-        tbody.innerHTML = "";
+<script>
+async function updatePrices() {
+  try {
+    const res = await fetch("/prices");
+    const data = await res.json();
 
-        for (const symbol in data.odos) {
-          const odosPrice = data.odos[symbol] ? Number(data.odos[symbol]).toFixed(6) : "—";
-          const mexcPrice = data.mexc[symbol] ? Number(data.mexc[symbol]).toFixed(6) : "—";
+    for (const token of Object.keys(data.odos)) {
+      const odos = data.odos[token];
+      const mexc = data.mexc[token];
+      const spread = data.spread[token];
 
-          const row = `
-            <tr>
-              <td>${symbol}</td>
-              <td>${odosPrice}</td>
-              <td>${mexcPrice}</td>
-            </tr>
-          `;
-          tbody.innerHTML += row;
-        }
-      } catch (err) {
-        console.error("Ошибка загрузки:", err);
-      }
+      document.getElementById(token + "-odos").textContent = odos !== null ? odos.toFixed(6) : "–";
+      document.getElementById(token + "-mexc").textContent = mexc !== null ? mexc.toFixed(6) : "–";
+      document.getElementById(token + "-spread").textContent = spread !== null ? spread.toFixed(2) + "%" : "–";
     }
+  } catch (e) {
+    console.error("Ошибка обновления цен:", e);
+  }
+}
 
-    loadPrices();
-    setInterval(loadPrices, 10000);
-  </script>
+// Первый запрос
+updatePrices();
+// Обновление каждые 15 секунд
+setInterval(updatePrices, 15000);
+</script>
+
 </body>
 </html>
