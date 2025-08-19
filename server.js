@@ -136,22 +136,48 @@ app.get("/prices-mexc-odos", async (req, res) => {
     for (const token of TOKENS) {
       let tokensBought = null;
 
-      // MEXC покупка
-      try {
-        const depthRes = await fetch(`https://api.mexc.com/api/v3/depth?symbol=${token.symbol}USDT&limit=50`);
-        const depthData = await depthRes.json();
-        const asks = depthData.asks;
+      // === MEXC покупка токенов на 50 USDT ===
+try {
+  const depthRes = await fetch(`https://api.mexc.com/api/v3/depth?symbol=${token.symbol}USDT&limit=50`);
+  const depthData = await depthRes.json();
+  const asks = depthData.asks;
 
-        if (asks) {
-          const result = calcAvgPrice(asks, 50);
-          if (result) {
-            tokensBought = result.tokens * (1 - MEXC_FEE);
-            mexcPrices[token.symbol] = result.avgPrice;
-          }
-        }
-      } catch {
-        mexcPrices[token.symbol] = null;
+  if (asks && asks.length > 0) {
+    // Считаем сколько токенов купим на 50 USDT
+    let remainingUSDT = 50 * (1 - MEXC_FEE); // учитываем комиссию MEXC
+    let totalTokens = 0;
+
+    for (const [priceStr, qtyStr] of asks) {
+      const price = parseFloat(priceStr);
+      const qty = parseFloat(qtyStr);
+      const cost = price * qty;
+
+      if (remainingUSDT >= cost) {
+        totalTokens += qty;
+        remainingUSDT -= cost;
+      } else {
+        totalTokens += remainingUSDT / price;
+        remainingUSDT = 0;
+        break;
       }
+    }
+
+    if (totalTokens > 0) {
+      mexcPrices[token.symbol] = 50 / totalTokens; // средняя цена покупки
+      tokensBought = totalTokens;
+    } else {
+      mexcPrices[token.symbol] = null;
+      tokensBought = null;
+    }
+  } else {
+    mexcPrices[token.symbol] = null;
+    tokensBought = null;
+  }
+} catch {
+  mexcPrices[token.symbol] = null;
+  tokensBought = null;
+}
+
 
       // ODOS продажа
       if (tokensBought) {
