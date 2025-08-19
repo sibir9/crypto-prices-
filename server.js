@@ -16,7 +16,11 @@ const TOKENS = [
 const CHAIN_ID = 137; // Polygon
 const USDT = "0xc2132d05d31c914a87c6611c10748aeb04b58e8f"; // USDT (Polygon)
 
-// Функция: считаем среднюю цену покупки USDT объема по ордерам
+// Комиссии
+const ODOS_FEE = 0.002; // 0.2%
+const MEXC_FEE = 0.001; // 0.1%
+
+// Рассчёт средней цены продажи в стакане на указанную сумму
 function calcAvgPrice(asks, usdtAmount) {
   let remainingUSDT = usdtAmount;
   let totalTokens = 0;
@@ -37,7 +41,7 @@ function calcAvgPrice(asks, usdtAmount) {
   }
 
   if (totalTokens === 0) return null;
-  return usdtAmount / totalTokens; // средняя цена покупки токена
+  return usdtAmount / totalTokens; // средняя цена 1 токена
 }
 
 app.get("/prices", async (req, res) => {
@@ -45,16 +49,20 @@ app.get("/prices", async (req, res) => {
     const odosPrices = {};
     const mexcPrices = {};
     const spread = {};
+    const profit = {};
 
     for (const token of TOKENS) {
-      // === ODOS цена покупки токена на 50 USDT ===
+      let tokensBought = null;
+
+      // === ODOS покупка токенов на 50 USDT (с комиссией 0.2%) ===
       try {
+        const effectiveUSDT = 50 * (1 - ODOS_FEE);
         const odosRes = await fetch("https://api.odos.xyz/sor/quote/v2", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             chainId: CHAIN_ID,
-            inputTokens: [{ tokenAddress: USDT, amount: String(50 * 1e6) }], // 50 USDT (6 decimals)
+            inputTokens: [{ tokenAddress: USDT, amount: String(effectiveUSDT * 1e6) }],
             outputTokens: [{ tokenAddress: token.address }],
             slippageLimitPercent: 1
           })
@@ -63,9 +71,8 @@ app.get("/prices", async (req, res) => {
         const odosData = await odosRes.json();
         const out = odosData.outAmounts?.[0];
         if (out) {
-          // теперь считаем цену 1 токена (50 USDT / полученные токены)
-          const tokensReceived = Number(out) / 1e18;
-          odosPrices[token.symbol] = 50 / tokensReceived;
+          tokensBought = Number(out) / 1e18;
+          odosPrices[token.symbol] = effectiveUSDT / tokensBought; // цена 1 токена
         } else {
           odosPrices[token.symbol] = null;
         }
@@ -73,31 +80,59 @@ app.get("/prices", async (req, res) => {
         odosPrices[token.symbol] = null;
       }
 
-      // === MEXC средняя цена продажи токена на 50 USDT ===
+      // === MEXC продажа этих токенов на 50 USDT ===
       try {
         const depthRes = await fetch(`https://api.mexc.com/api/v3/depth?symbol=${token.symbol}USDT&limit=50`);
         const depthData = await depthRes.json();
-        const bids = depthData.bids;
+        const asks = depthData.asks;
 
-        if (bids && bids.length > 0) {
-          mexcPrices[token.symbol] = calcAvgPrice(bids, 50);
+        if (asks && asks.length > 0 && tokensBought) {
+          // Считаем сколько USDT мы получим, продав tokensBought
+          let remainingTokens = tokensBought;
+          let totalUSDT = 0;
+
+          for (const [priceStr, qtyStr] of asks) {
+            const price = parseFloat(priceStr);
+            const qty = parseFloat(qtyStr);
+
+            if (remainingTokens >= qty) {
+              totalUSDT += price * qty;
+              remainingTokens -= qty;
+            } else {
+              totalUSDT += price * remainingTokens;
+              remainingTokens = 0;
+              break;
+            }
+          }
+
+          if (remainingTokens === 0) {
+            // Учёт комиссии 0.1% MEXC
+            const usdtAfterFee = totalUSDT * (1 - MEXC_FEE);
+            mexcPrices[token.symbol] = totalUSDT / tokensBought; // средняя цена 1 токена
+            profit[token.symbol] = usdtAfterFee - 50; // прибыль в USDT
+          } else {
+            mexcPrices[token.symbol] = null;
+            profit[token.symbol] = null;
+          }
         } else {
           mexcPrices[token.symbol] = null;
+          profit[token.symbol] = null;
         }
       } catch {
         mexcPrices[token.symbol] = null;
+        profit[token.symbol] = null;
       }
 
       // === Спред ===
       if (odosPrices[token.symbol] && mexcPrices[token.symbol]) {
         spread[token.symbol] =
-          ((mexcPrices[token.symbol] - odosPrices[token.symbol]) / odosPrices[token.symbol]) * 100;
+          ((odosPrices[token.symbol] - mexcPrices[token.symbol]) / mexcPrices[token.symbol]) * 100;
       } else {
         spread[token.symbol] = null;
       }
     }
 
-    res.json({ odos: odosPrices, mexc: mexcPrices, spread });
+    res.json({ odos: odosPrices, mexc: mexcPrices, spread, profit });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Ошибка при получении цен" });
