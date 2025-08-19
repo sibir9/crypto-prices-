@@ -43,42 +43,47 @@
     <tbody></tbody>
   </table>
 
-  <script>
-    function formatProfit(value) {
-      if (value == null) return "-";
-      const fixed = value.toFixed(4);
-      if (value > 0) return `<span class="profit-pos">+${fixed}</span>`;
-      if (value < 0) return `<span class="profit-neg">${fixed}</span>`;
-      return fixed;
+
+<script>
+  const TOKENS = ["NAKA", "SAND", "NWS"]; // фиксируем список
+
+  function formatProfit(value) {
+    if (value == null) return "-";
+    const fixed = value.toFixed(4);
+    if (value > 0) return `<span class="profit-pos">+${fixed}</span>`;
+    if (value < 0) return `<span class="profit-neg">${fixed}</span>`;
+    return fixed;
+  }
+
+  async function loadData(url, tableId) {
+    const res = await fetch(url);
+    const data = await res.json();
+
+    const tbody = document.querySelector(`#${tableId} tbody`);
+    tbody.innerHTML = "";
+
+    for (const token of TOKENS) {
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td>${token}</td>
+        <td>${data.odos?.[token] ? data.odos[token].toFixed(6) : "-"}</td>
+        <td>${data.mexc?.[token] ? data.mexc[token].toFixed(6) : "-"}</td>
+        <td>${data.spread?.[token] ? data.spread[token].toFixed(2) : "-"}%</td>
+        <td>${formatProfit(data.profit?.[token])}</td>
+      `;
+      tbody.appendChild(row);
     }
+  }
 
-    async function loadData(url, tableId) {
-      const res = await fetch(url);
-      const data = await res.json();
+  async function refresh() {
+    await loadData("/prices-odos-mexc", "odos-mexc");
+    await loadData("/prices-mexc-odos", "mexc-odos");
+  }
 
-      const tbody = document.querySelector(`#${tableId} tbody`);
-      tbody.innerHTML = "";
+  setInterval(refresh, 5000);
+  refresh();
+</script>
 
-      for (const token in data.odos || data.mexc) {
-        const row = document.createElement("tr");
-        row.innerHTML = `
-          <td>${token}</td>
-          <td>${data.odos?.[token] ? data.odos[token].toFixed(6) : "-"}</td>
-          <td>${data.mexc?.[token] ? data.mexc[token].toFixed(6) : "-"}</td>
-          <td>${data.spread?.[token] ? data.spread[token].toFixed(2) : "-"}%</td>
-          <td>${formatProfit(data.profit?.[token])}</td>
-        `;
-        tbody.appendChild(row);
-      }
-    }
-
-    async function refresh() {
-      await loadData("/prices-odos-mexc", "odos-mexc");
-      await loadData("/prices-mexc-odos", "mexc-odos");
-    }
-
-    setInterval(refresh, 5000);
-    refresh();
-  </script>
+  
 </body>
 </html>
