@@ -84,14 +84,14 @@ app.get("/prices", async (req, res) => {
       try {
         const depthRes = await fetch(`https://api.mexc.com/api/v3/depth?symbol=${token.symbol}USDT&limit=50`);
         const depthData = await depthRes.json();
-        const asks = depthData.asks;
+        const bids = depthData.bids;
 
-        if (asks && asks.length > 0 && tokensBought) {
+        if (bids && bids.length > 0 && tokensBought) {
           // Считаем сколько USDT мы получим, продав tokensBought
           let remainingTokens = tokensBought;
           let totalUSDT = 0;
 
-          for (const [priceStr, qtyStr] of asks) {
+          for (const [priceStr, qtyStr] of bids) {
             const price = parseFloat(priceStr);
             const qty = parseFloat(qtyStr);
 
@@ -126,7 +126,7 @@ app.get("/prices", async (req, res) => {
       // === Спред ===
       if (odosPrices[token.symbol] && mexcPrices[token.symbol]) {
         spread[token.symbol] =
-          ((odosPrices[token.symbol] - mexcPrices[token.symbol]) / mexcPrices[token.symbol]) * 100;
+          (( mexcPrices[token.symbol] - odosPrices[token.symbol]) / odosPrices[token.symbol]) * 100;
       } else {
         spread[token.symbol] = null;
       }
