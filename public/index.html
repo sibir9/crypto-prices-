@@ -4,100 +4,109 @@
   <meta charset="UTF-8">
   <title>Arbitrage Monitor</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    table { border-collapse: collapse; margin: 10px; width: 100%; }
-    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
-    th { background: #eee; }
-    .profit-pos { color: green; font-weight: bold; }
-    .profit-neg { color: red; font-weight: bold; }
-
-    /* контейнер для таблиц */
-    .tables {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: 20px;
+    table {
+      border-collapse: collapse;
+      width: 650px;
     }
-    .table-box {
-      flex: 1;
+    th, td {
+      border: 1px solid #aaa;
+      padding: 6px;
+      text-align: center;
+    }
+    .profit-positive {
+      color: green;
+      font-weight: bold;
+    }
+    .profit-negative {
+      color: red;
+      font-weight: bold;
     }
   </style>
 </head>
 <body>
-  <h1>📊 Arbitrage Monitor</h1>
+  <h2>Arbitrage Monitor</h2>
+  <table id="pricesTable">
+    <thead>
+      <tr>
+        <th>Токен</th>
+        <th>ODOS</th>
+        <th>MEXC</th>
+        <th>СПРЕД (%)</th>
+        <th>Прибыль (USDT)</th>
+      </tr>
+    </thead>
+    <tbody id="pricesBody">
+      <tr data-symbol="NAKA">
+        <td>NAKA</td>
+        <td id="odos-NAKA"></td>
+        <td id="mexc-NAKA"></td>
+        <td id="spread-NAKA"></td>
+        <td id="profit-NAKA"></td>
+      </tr>
+      <tr data-symbol="SAND">
+        <td>SAND</td>
+        <td id="odos-SAND"></td>
+        <td id="mexc-SAND"></td>
+        <td id="spread-SAND"></td>
+        <td id="profit-SAND"></td>
+      </tr>
+      <tr data-symbol="NWS">
+        <td>NWS</td>
+        <td id="odos-NWS"></td>
+        <td id="mexc-NWS"></td>
+        <td id="spread-NWS"></td>
+        <td id="profit-NWS"></td>
+      </tr>
+    </tbody>
+  </table>
 
-  <div class="tables">
-    <div class="table-box">
-      <h2>ODOS → MEXC</h2>
-      <table id="odos-mexc">
-        <thead>
-          <tr>
-            <th>Токен</th>
-            <th>ODOS цена</th>
-            <th>MEXC цена</th>
-            <th>Спред (%)</th>
-            <th>Прибыль (USDT)</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </div>
+  <script>
+    async function updatePrices() {
+      try {
+        const res = await fetch("/prices");
+        const data = await res.json();
 
-    <div class="table-box">
-      <h2>MEXC → ODOS</h2>
-      <table id="mexc-odos">
-        <thead>
-          <tr>
-            <th>Токен</th>
-            <th>MEXC цена</th>
-            <th>ODOS цена</th>
-            <th>Спред (%)</th>
-            <th>Прибыль (USDT)</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </div>
-  </div>
+        for (const symbol of ["NAKA", "SAND", "NWS"]) {
+          document.getElementById(`odos-${symbol}`).textContent =
+            data.odos[symbol] ? data.odos[symbol].toFixed(6) : "—";
+          document.getElementById(`mexc-${symbol}`).textContent =
+            data.mexc[symbol] ? data.mexc[symbol].toFixed(6) : "—";
+          document.getElementById(`spread-${symbol}`).textContent =
+            data.spread[symbol] ? data.spread[symbol].toFixed(2) + "%" : "—";
 
-<script>
-  const TOKENS = ["NAKA", "SAND", "NWS"]; // фиксируем список
+          const profitCell = document.getElementById(`profit-${symbol}`);
+          if (data.profit[symbol] !== null) {
+            const profit = data.profit[symbol];
+            profitCell.textContent = profit.toFixed(4);
+            profitCell.className =
+              profit > 0 ? "profit-positive" : "profit-negative";
+          } else {
+            profitCell.textContent = "—";
+            profitCell.className = "";
+          }
+        }
 
-  function formatProfit(value) {
-    if (value == null) return "-";
-    const fixed = value.toFixed(4);
-    if (value > 0) return `<span class="profit-pos">+${fixed}</span>`;
-    if (value < 0) return `<span class="profit-neg">${fixed}</span>`;
-    return fixed;
-  }
+        // Сортируем строки таблицы по прибыли
+        const tbody = document.getElementById("pricesBody");
+        const rows = Array.from(tbody.querySelectorAll("tr"));
 
-  async function loadData(url, tableId) {
-    const res = await fetch(url);
-    const data = await res.json();
+        rows.sort((a, b) => {
+          const symA = a.dataset.symbol;
+          const symB = b.dataset.symbol;
+          const profitA = data.profit[symA] ?? -Infinity;
+          const profitB = data.profit[symB] ?? -Infinity;
+          return profitB - profitA; // от большего к меньшему
+        });
 
-    const tbody = document.querySelector(`#${tableId} tbody`);
-    tbody.innerHTML = "";
+        rows.forEach(row => tbody.appendChild(row));
 
-    for (const token of TOKENS) {
-      const row = document.createElement("tr");
-      row.innerHTML = `
-        <td>${token}</td>
-        <td>${data.odos?.[token] ? data.odos[token].toFixed(6) : "-"}</td>
-        <td>${data.mexc?.[token] ? data.mexc[token].toFixed(6) : "-"}</td>
-        <td>${data.spread?.[token] ? data.spread[token].toFixed(2) : "-"}%</td>
-        <td>${formatProfit(data.profit?.[token])}</td>
-      `;
-      tbody.appendChild(row);
+      } catch (e) {
+        console.error("Ошибка загрузки:", e);
+      }
     }
-  }
 
-  async function refresh() {
-    await loadData("/prices-odos-mexc", "odos-mexc");
-    await loadData("/prices-mexc-odos", "mexc-odos");
-  }
-
-  setInterval(refresh, 5000);
-  refresh();
-</script>
+    updatePrices();
+    setInterval(updatePrices, 15000); // обновление каждые 15 сек
+  </script>
 </body>
 </html>
