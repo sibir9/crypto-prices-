@@ -126,7 +126,7 @@ app.get("/prices", async (req, res) => {
       // === Спред ===
       if (odosPrices[token.symbol] && mexcPrices[token.symbol]) {
         spread[token.symbol] =
-          ((odosPrices[token.symbol] - mexcPrices[token.symbol]) / mexcPrices[token.symbol]) * 100;
+          (( mexcPrices[token.symbol] - odosPrices[token.symbol]) / odosPrices[token.symbol]) * 100;
       } else {
         spread[token.symbol] = null;
       }
