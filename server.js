@@ -20,7 +20,7 @@ const USDT = "0xc2132d05d31c914a87c6611c10748aeb04b58e8f"; // USDT (Polygon)
 const ODOS_FEE = 0.002; // 0.2%
 const MEXC_FEE = 0.001; // 0.1%
 
-// Рассчёт средней цены продажи в стакане на указанную сумму
+// Рассчёт цены продажи в стакане на указанную сумму
 function calcAvgPrice(asks, usdtAmount) {
   let remainingUSDT = usdtAmount;
   let totalTokens = 0;
