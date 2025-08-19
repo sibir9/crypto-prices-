@@ -77,10 +77,10 @@ app.get("/prices", async (req, res) => {
       try {
         const depthRes = await fetch(`https://api.mexc.com/api/v3/depth?symbol=${token.symbol}USDT&limit=50`);
         const depthData = await depthRes.json();
-        const asks = depthData.asks;
+        const bids = depthData.bids;
 
-        if (asks && asks.length > 0) {
-          mexcPrices[token.symbol] = calcAvgPrice(asks, 50);
+        if (bids && bids.length > 0) {
+          mexcPrices[token.symbol] = calcAvgPrice(bids, 50);
         } else {
           mexcPrices[token.symbol] = null;
         }
