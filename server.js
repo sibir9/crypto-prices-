@@ -84,14 +84,14 @@ app.get("/prices", async (req, res) => {
       try {
         const depthRes = await fetch(`https://api.mexc.com/api/v3/depth?symbol=${token.symbol}USDT&limit=50`);
         const depthData = await depthRes.json();
-        const asks = depthData.asks;
+        const bids = depthData.bids;
 
-        if (asks && asks.length > 0 && tokensBought) {
+        if (bids && bids.length > 0 && tokensBought) {
           // Считаем сколько USDT мы получим, продав tokensBought
           let remainingTokens = tokensBought;
           let totalUSDT = 0;
 
-          for (const [priceStr, qtyStr] of asks) {
+          for (const [priceStr, qtyStr] of bids) {
             const price = parseFloat(priceStr);
             const qty = parseFloat(qtyStr);
 
