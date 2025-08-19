@@ -5,44 +5,60 @@
   <title>Arbitrage Monitor</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; }
-    table { border-collapse: collapse; margin: 20px 0; width: 100%; }
+    table { border-collapse: collapse; margin: 10px; width: 100%; }
     th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
     th { background: #eee; }
     .profit-pos { color: green; font-weight: bold; }
     .profit-neg { color: red; font-weight: bold; }
+
+    /* контейнер для таблиц */
+    .tables {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 20px;
+    }
+    .table-box {
+      flex: 1;
+    }
   </style>
 </head>
 <body>
   <h1>📊 Arbitrage Monitor</h1>
 
-  <h2>ODOS → MEXC</h2>
-  <table id="odos-mexc">
-    <thead>
-      <tr>
-        <th>Токен</th>
-        <th>ODOS цена</th>
-        <th>MEXC цена</th>
-        <th>Спред (%)</th>
-        <th>Прибыль (USDT)</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
+  <div class="tables">
+    <div class="table-box">
+      <h2>ODOS → MEXC</h2>
+      <table id="odos-mexc">
+        <thead>
+          <tr>
+            <th>Токен</th>
+            <th>ODOS цена</th>
+            <th>MEXC цена</th>
+            <th>Спред (%)</th>
+            <th>Прибыль (USDT)</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
 
-  <h2>MEXC → ODOS</h2>
-  <table id="mexc-odos">
-    <thead>
-      <tr>
-        <th>Токен</th>
-        <th>MEXC цена</th>
-        <th>ODOS цена</th>
-        <th>Спред (%)</th>
-        <th>Прибыль (USDT)</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
-
+    <div class="table-box">
+      <h2>MEXC → ODOS</h2>
+      <table id="mexc-odos">
+        <thead>
+          <tr>
+            <th>Токен</th>
+            <th>MEXC цена</th>
+            <th>ODOS цена</th>
+            <th>Спред (%)</th>
+            <th>Прибыль (USDT)</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
 
 <script>
   const TOKENS = ["NAKA", "SAND", "NWS"]; // фиксируем список
@@ -83,7 +99,5 @@
   setInterval(refresh, 5000);
   refresh();
 </script>
-
-  
 </body>
 </html>
