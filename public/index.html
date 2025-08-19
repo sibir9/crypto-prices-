@@ -1,57 +1,112 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Цены токенов</title>
-<style>
-  body { font-family: Arial, sans-serif; background: #f8f9fa; padding: 30px; }
-  table { border-collapse: collapse; width: 100%; max-width: 600px; margin: auto; }
-  th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
-  th { background: #2c3e50; color: white; }
-</style>
+  <meta charset="UTF-8">
+  <title>Arbitrage Monitor</title>
+  <style>
+    table {
+      border-collapse: collapse;
+      width: 650px;
+    }
+    th, td {
+      border: 1px solid #aaa;
+      padding: 6px;
+      text-align: center;
+    }
+    .profit-positive {
+      color: green;
+      font-weight: bold;
+    }
+    .profit-negative {
+      color: red;
+      font-weight: bold;
+    }
+  </style>
 </head>
 <body>
-<h1>Цены токенов</h1>
-<table>
-  <thead>
-    <tr>
-      <th>Токен</th>
-      <th>ODOS (DEX)</th>
-      <th>MEXC (CEX)</th>
-      <th>Спред (%)</th>
-    </tr>
-  </thead>
-  <tbody id="tokens-table">
-    <tr><td>NAKA</td><td id="NAKA-odos">–</td><td id="NAKA-mexc">–</td><td id="NAKA-spread">–</td></tr>
-    <tr><td>SAND</td><td id="SAND-odos">–</td><td id="SAND-mexc">–</td><td id="SAND-spread">–</td></tr>
-    <tr><td>NWS</td><td id="NWS-odos">–</td><td id="NWS-mexc">–</td><td id="NWS-spread">–</td></tr>
-  </tbody>
-</table>
+  <h2>Arbitrage Monitor</h2>
+  <table id="pricesTable">
+    <thead>
+      <tr>
+        <th>Токен</th>
+        <th>ODOS</th>
+        <th>MEXC</th>
+        <th>СПРЕД (%)</th>
+        <th>Прибыль (USDT)</th>
+      </tr>
+    </thead>
+    <tbody id="pricesBody">
+      <tr data-symbol="NAKA">
+        <td>NAKA</td>
+        <td id="odos-NAKA"></td>
+        <td id="mexc-NAKA"></td>
+        <td id="spread-NAKA"></td>
+        <td id="profit-NAKA"></td>
+      </tr>
+      <tr data-symbol="SAND">
+        <td>SAND</td>
+        <td id="odos-SAND"></td>
+        <td id="mexc-SAND"></td>
+        <td id="spread-SAND"></td>
+        <td id="profit-SAND"></td>
+      </tr>
+      <tr data-symbol="NWS">
+        <td>NWS</td>
+        <td id="odos-NWS"></td>
+        <td id="mexc-NWS"></td>
+        <td id="spread-NWS"></td>
+        <td id="profit-NWS"></td>
+      </tr>
+    </tbody>
+  </table>
 
-<script>
-async function updatePrices() {
-  try {
-    const res = await fetch("/prices");
-    const data = await res.json();
+  <script>
+    async function updatePrices() {
+      try {
+        const res = await fetch("/prices");
+        const data = await res.json();
 
-    for (const symbol of ["NAKA","SAND","NWS"]) {
-      const odos = data.odos[symbol];
-      const mexc = data.mexc[symbol];
-      const spread = data.spread[symbol];
+        for (const symbol of ["NAKA", "SAND", "NWS"]) {
+          document.getElementById(`odos-${symbol}`).textContent =
+            data.odos[symbol] ? data.odos[symbol].toFixed(6) : "—";
+          document.getElementById(`mexc-${symbol}`).textContent =
+            data.mexc[symbol] ? data.mexc[symbol].toFixed(6) : "—";
+          document.getElementById(`spread-${symbol}`).textContent =
+            data.spread[symbol] ? data.spread[symbol].toFixed(2) + "%" : "—";
 
-      document.getElementById(symbol + "-odos").textContent = odos !== null ? odos.toFixed(6) : "–";
-      document.getElementById(symbol + "-mexc").textContent = mexc !== null ? mexc.toFixed(6) : "–";
-      document.getElementById(symbol + "-spread").textContent = spread !== null ? spread.toFixed(2) : "–";
+          const profitCell = document.getElementById(`profit-${symbol}`);
+          if (data.profit[symbol] !== null) {
+            const profit = data.profit[symbol];
+            profitCell.textContent = profit.toFixed(4);
+            profitCell.className =
+              profit > 0 ? "profit-positive" : "profit-negative";
+          } else {
+            profitCell.textContent = "—";
+            profitCell.className = "";
+          }
+        }
+
+        // Сортируем строки таблицы по прибыли
+        const tbody = document.getElementById("pricesBody");
+        const rows = Array.from(tbody.querySelectorAll("tr"));
+
+        rows.sort((a, b) => {
+          const symA = a.dataset.symbol;
+          const symB = b.dataset.symbol;
+          const profitA = data.profit[symA] ?? -Infinity;
+          const profitB = data.profit[symB] ?? -Infinity;
+          return profitB - profitA; // от большего к меньшему
+        });
+
+        rows.forEach(row => tbody.appendChild(row));
+
+      } catch (e) {
+        console.error("Ошибка загрузки:", e);
+      }
     }
-  } catch (e) {
-    console.error("Ошибка загрузки:", e);
-  }
-}
 
-// Обновляем каждые 15 секунд
-updatePrices();
-setInterval(updatePrices, 15000);
-</script>
+    updatePrices();
+    setInterval(updatePrices, 15000); // обновление каждые 15 сек
+  </script>
 </body>
 </html>
