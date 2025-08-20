@@ -11,6 +11,7 @@ const TOKENS = [
   { symbol: "NAKA", address: "0x311434160d7537be358930def317afb606c0d737" },
   { symbol: "SAND", address: "0xbbba073c31bf03b8acf7c28ef0738decf3695683" },
   { symbol: "ZRO", address: "0x6985884c4392d348587b19cb9eaaf157f13271cd" },
+  { symbol: "COCA", address: "0x7b12598e3616261df1c05ec28de0d2fb10c1f206" },
   { symbol: "NWS",  address: "0x13646e0e2d768d31b75d1a1e375e3e17f18567f2" }
 ];
 
