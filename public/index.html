@@ -43,6 +43,13 @@
         <td id="spread-NAKA"></td>
         <td id="profit-NAKA"></td>
       </tr>
+  <tr data-symbol="COCA">
+        <td>COCA</td>
+        <td id="odos-COCA"></td>
+        <td id="mexc-COCA"></td>
+        <td id="spread-COCA"></td>
+        <td id="profit-COCA"></td>
+      </tr>
         <tr data-symbol="ZRO">
         <td>ZRO</td>
         <td id="odos-ZRO"></td>
@@ -73,7 +80,7 @@
         const res = await fetch("/prices");
         const data = await res.json();
 
-        for (const symbol of ["NAKA", "SAND", "ZRO", "NWS"]) {
+        for (const symbol of ["NAKA", "SAND", "ZRO", "COCA", "NWS"]) {
           document.getElementById(`odos-${symbol}`).textContent =
             data.odos[symbol] ? data.odos[symbol].toFixed(6) : "—";
           document.getElementById(`mexc-${symbol}`).textContent =
